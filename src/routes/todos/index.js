@@ -44,18 +44,18 @@ TodosRouter.get("/byid", async (req, res) => {
     res.status(StatusCodes.BAD_REQUEST).send(ReasonPhrases.BAD_REQUEST);
     return;
   }
-  const todo = await TodoModel.findOne({ where: { id: todoId } });
-
-  res.status(StatusCodes.OK).json({ todo: todo });
+  try {
+    const todo = await TodoModel.findOne({ where: { id: todoId } });
+    res.status(StatusCodes.OK).json({ todo: todo });
+  } catch (error) {
+    console.error("userID konnte nicht ermittelt werden:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
+  }
 });
 
 // Alle Todos von einer UserId
-TodosRouter.get("/byuserid", (req, res) => {
-  // const userId = req.body.userId;
-  // const userId = parseInt(req.query.userId);
+TodosRouter.get("/byuserid", async (req, res) => {
   const userId = req.query.userId;
-  console.log(userId);
-
   if (!userId) {
     res
       .status(StatusCodes.BAD_REQUEST)
@@ -63,10 +63,13 @@ TodosRouter.get("/byuserid", (req, res) => {
     return;
   }
 
-  const userTodos = todos.filter((todo) => todo.userId == userId);
-
-  res.status(StatusCodes.OK).json(userTodos);
-  // res.status(StatusCodes.OK).send(JSON.stringify(userTodos)); //alternativ
+  try {
+    const userTodos = await TodoModel.findAll({ where: { userId: userId } });
+    res.status(StatusCodes.OK).json(userTodos);
+  } catch (error) {
+    console.error("userID konnte nicht ermittelt werden:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
+  }
 });
 
 TodosRouter.get("/all", async (req, res) => {
@@ -75,23 +78,25 @@ TodosRouter.get("/all", async (req, res) => {
 });
 
 // PUT REQUESTS
-TodosRouter.put("/mark", (req, res) => {
+TodosRouter.put("/mark", async (req, res) => {
   const { id, newIsDone } = req.body;
 
-  const todo = todos.find((item) => item.id == id);
+  try {
+    const updatedTodo = await TodoModel.update(
+      { isDone: newIsDone },
+      { where: { id: id }, returning: true }
+    );
 
-  // setzt das zuvor definierte todo auf den neuen isDone WErt
-  todo.isDone = newIsDone;
+    if (updatedTodo[0] === 0) {
+      res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND + " Todo nicht gefunden");
+      return;
+    }
 
-  // Todo rauslöschen
-  const newTodos = todos.filter((item) => item.id != id);
-
-  // Geupdatete Todo wieder hinzufügen
-  newTodos.push(todo);
-
-  todos = newTodos;
-
-  res.status(StatusCodes.OK).json({ updatedTodo: todo });
+    res.status(StatusCodes.OK).json({ updatedTodo: updatedTodo[1][0] });
+  } catch (error) {
+    console.error("Fehler beim Update:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
+  }
 });
 
 TodosRouter.put("/update", async (req, res) => {
