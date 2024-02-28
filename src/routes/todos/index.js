@@ -79,20 +79,15 @@ TodosRouter.get("/all", async (req, res) => {
 
 // PUT REQUESTS
 TodosRouter.put("/mark", async (req, res) => {
-  const { id, newIsDone } = req.body;
+  const { todoId, newIsDone } = req.body;
 
   try {
     const updatedTodo = await TodoModel.update(
       { isDone: newIsDone },
-      { where: { id: id }, returning: true }
+      { where: { id: todoId }, returning: true }
     );
 
-    if (updatedTodo[0] === 0) {
-      res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND + " Todo nicht gefunden");
-      return;
-    }
-
-    res.status(StatusCodes.OK).json({ updatedTodo: updatedTodo[1][0] });
+    res.status(StatusCodes.OK).json({ updatedTodoId: todoId });
   } catch (error) {
     console.error("Fehler beim Update:", error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
